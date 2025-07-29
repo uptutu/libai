@@ -1,4 +1,4 @@
-module local.git/libs/libai
+module local.git/libs/libai.git
 
 go 1.24.4
 
