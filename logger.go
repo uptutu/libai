@@ -8,6 +8,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 )
 
 type LogModel struct {
@@ -25,6 +26,8 @@ type Logger struct {
 	database   string
 	collection string
 	isDebug    bool
+	zapLogger  *zap.Logger // Optional: if you want to use zap for logging
+	wrap       *LoggerZapWrapper
 }
 
 func (l *Logger) log(level, action, flag string, content any) {
@@ -36,6 +39,10 @@ func (l *Logger) log(level, action, flag string, content any) {
 
 	if l.isDebug {
 		fmt.Printf("[%s] %s ||  %s\n", level, action, string(c))
+	}
+
+	if l.mongo != nil {
+		return
 	}
 
 	coll := l.mongo.Database(l.database).Collection(l.collection)
@@ -74,6 +81,13 @@ func (l *Logger) Info(action string, flag string, content any) {
 	l.log("info", action, flag, content)
 }
 
+func (l *Logger) Z() *LoggerZapWrapper {
+	if l.wrap == nil {
+		l.wrap = &LoggerZapWrapper{Logger: l}
+	}
+	return l.wrap
+}
+
 type LoggerBuilder struct {
 	mongo struct {
 		host       string
@@ -90,7 +104,7 @@ type LoggerBuilder struct {
 func NewLoggerBuilder() *LoggerBuilder {
 	return &LoggerBuilder{}
 }
-func (b LoggerBuilder) mongoToDSN() string {
+func (b *LoggerBuilder) mongoToDSN() string {
 	return fmt.Sprintf("mongodb://%s:%s@%s:%d", b.mongo.username, b.mongo.password, b.mongo.host, b.mongo.port)
 }
 
@@ -119,16 +133,26 @@ func (b *LoggerBuilder) Build() (*Logger, error) {
 		return nil, fmt.Errorf("origin must be set")
 	}
 
-	clientOptions := options.Client().
-		ApplyURI(b.mongoToDSN())
+	var client *mongo.Client
+	var err error
 
-	client, err := mongo.Connect(context.TODO(), clientOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
+	if b.mongo.host != "" {
+		clientOptions := options.Client().
+			ApplyURI(b.mongoToDSN())
+
+		client, err = mongo.Connect(context.TODO(), clientOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
+		}
+
+		if err = client.Ping(context.TODO(), nil); err != nil {
+			return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
+		}
 	}
 
-	if err = client.Ping(context.TODO(), nil); err != nil {
-		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
+	zapL, _ := zap.NewDevelopment()
+	if !b.isDebug {
+		zapL, _ = zap.NewProduction()
 	}
 
 	logger := &Logger{
@@ -137,7 +161,31 @@ func (b *LoggerBuilder) Build() (*Logger, error) {
 		database:   b.mongo.database,
 		collection: b.mongo.collection,
 		isDebug:    b.isDebug,
+		zapLogger:  zapL,
 	}
 
 	return logger, nil
+}
+
+type LoggerZapWrapper struct {
+	*Logger
+}
+
+func (l *LoggerZapWrapper) Warn(action string, flag string, content any) {
+	l.zapLogger.Warn(action, zap.String("flag", flag), zap.Any("content", content))
+}
+
+func (l *LoggerZapWrapper) Debug(action string, flag string, content any) {
+	if !l.isDebug {
+		return
+	}
+	l.zapLogger.Debug(action, zap.String("flag", flag), zap.Any("content", content))
+}
+
+func (l *LoggerZapWrapper) Error(action string, flag string, content any) {
+	l.zapLogger.Error(action, zap.String("flag", flag), zap.Any("content", content))
+}
+
+func (l *LoggerZapWrapper) Info(action string, flag string, content any) {
+	l.zapLogger.Info(action, zap.String("flag", flag), zap.Any("content", content))
 }
