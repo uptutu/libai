@@ -64,7 +64,7 @@ func (l *Logger) getStackTrace() string {
 func (l *Logger) log(level, action, flag string, content any) {
 	c, err := json.Marshal(content)
 	if err != nil {
-		fmt.Printf("log content not json: %v\n", err)
+		fmt.Printf("log content not json: %v, stack: %s\n", err, l.getStackTrace())
 		return
 	}
 
