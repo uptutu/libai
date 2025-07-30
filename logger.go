@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,16 +20,45 @@ type LogModel struct {
 	Flag       string `bson:"flag"`        // 标识
 	CreateTime int    `bson:"create_time"` // 时间
 	Content    string `bson:"content"`     // 详细内容
+	StackTrace string `bson:"stack_trace"` // 堆栈信息
 }
 
 type Logger struct {
-	origin     string
-	mongo      *mongo.Client
-	database   string
-	collection string
-	isDebug    bool
-	zapLogger  *zap.Logger // Optional: if you want to use zap for logging
-	wrap       *LoggerZapWrapper
+	origin      string
+	mongo       *mongo.Client
+	database    string
+	collection  string
+	isDebug     bool
+	enableStack bool        // 是否启用非info级别日志的堆栈信息
+	zapLogger   *zap.Logger // Optional: if you want to use zap for logging
+	wrap        *LoggerZapWrapper
+}
+
+// getStackTrace 获取堆栈信息
+func (l *Logger) getStackTrace() string {
+	if !l.enableStack {
+		return ""
+	}
+
+	buf := make([]byte, 1024*4)
+	n := runtime.Stack(buf, false)
+	stack := string(buf[:n])
+
+	// 过滤掉当前函数和log函数的堆栈信息
+	lines := strings.Split(stack, "\n")
+	var filteredLines []string
+	skip := 0
+	for i, line := range lines {
+		if strings.Contains(line, "getStackTrace") || strings.Contains(line, ".log(") {
+			skip = i + 2 // 跳过函数名和文件行号
+			continue
+		}
+		if i > skip {
+			filteredLines = append(filteredLines, line)
+		}
+	}
+
+	return strings.Join(filteredLines, "\n")
 }
 
 func (l *Logger) log(level, action, flag string, content any) {
@@ -37,11 +68,20 @@ func (l *Logger) log(level, action, flag string, content any) {
 		return
 	}
 
-	if l.isDebug {
-		fmt.Printf("[%s] %s ||  %s\n", level, action, string(c))
+	// 获取堆栈信息（仅对非info级别的日志）
+	var stackTrace string
+	if level != "info" {
+		stackTrace = l.getStackTrace()
 	}
 
-	if l.mongo != nil {
+	if l.isDebug {
+		fmt.Printf("[%s] %s ||  %s\n", level, action, string(c))
+		if stackTrace != "" {
+			fmt.Printf("Stack trace:\n%s\n", stackTrace)
+		}
+	}
+
+	if l.mongo == nil {
 		return
 	}
 
@@ -52,7 +92,8 @@ func (l *Logger) log(level, action, flag string, content any) {
 		Origin:     l.origin,
 		Flag:       flag,
 		Content:    string(c),
-		CreateTime: int(time.Now().Unix()), // Assuming time is set in context
+		StackTrace: stackTrace,
+		CreateTime: int(time.Now().Unix()),
 	}
 
 	if _, err = coll.InsertOne(context.TODO(), record); err != nil {
@@ -97,8 +138,9 @@ type LoggerBuilder struct {
 		database   string
 		collection string
 	}
-	origin  string
-	isDebug bool
+	origin      string
+	isDebug     bool
+	enableStack bool // 是否启用非info级别日志的堆栈信息
 }
 
 func NewLoggerBuilder() *LoggerBuilder {
@@ -125,6 +167,12 @@ func (b *LoggerBuilder) SetOrigin(origin string) *LoggerBuilder {
 
 func (b *LoggerBuilder) SetDebugMode() *LoggerBuilder {
 	b.isDebug = true
+	return b
+}
+
+// SetStackTrace 设置是否启用非info级别日志的堆栈信息
+func (b *LoggerBuilder) SetStackTrace(enable bool) *LoggerBuilder {
+	b.enableStack = enable
 	return b
 }
 
@@ -156,12 +204,13 @@ func (b *LoggerBuilder) Build() (*Logger, error) {
 	}
 
 	logger := &Logger{
-		origin:     b.origin,
-		mongo:      client,
-		database:   b.mongo.database,
-		collection: b.mongo.collection,
-		isDebug:    b.isDebug,
-		zapLogger:  zapL,
+		origin:      b.origin,
+		mongo:       client,
+		database:    b.mongo.database,
+		collection:  b.mongo.collection,
+		isDebug:     b.isDebug,
+		enableStack: b.enableStack,
+		zapLogger:   zapL,
 	}
 
 	return logger, nil
@@ -172,18 +221,30 @@ type LoggerZapWrapper struct {
 }
 
 func (l *LoggerZapWrapper) Warn(action string, flag string, content any) {
-	l.zapLogger.Warn(action, zap.String("flag", flag), zap.Any("content", content))
+	fields := []zap.Field{zap.String("flag", flag), zap.Any("content", content)}
+	if l.enableStack {
+		fields = append(fields, zap.String("stack_trace", l.getStackTrace()))
+	}
+	l.zapLogger.Warn(action, fields...)
 }
 
 func (l *LoggerZapWrapper) Debug(action string, flag string, content any) {
 	if !l.isDebug {
 		return
 	}
-	l.zapLogger.Debug(action, zap.String("flag", flag), zap.Any("content", content))
+	fields := []zap.Field{zap.String("flag", flag), zap.Any("content", content)}
+	if l.enableStack {
+		fields = append(fields, zap.String("stack_trace", l.getStackTrace()))
+	}
+	l.zapLogger.Debug(action, fields...)
 }
 
 func (l *LoggerZapWrapper) Error(action string, flag string, content any) {
-	l.zapLogger.Error(action, zap.String("flag", flag), zap.Any("content", content))
+	fields := []zap.Field{zap.String("flag", flag), zap.Any("content", content)}
+	if l.enableStack {
+		fields = append(fields, zap.String("stack_trace", l.getStackTrace()))
+	}
+	l.zapLogger.Error(action, fields...)
 }
 
 func (l *LoggerZapWrapper) Info(action string, flag string, content any) {
