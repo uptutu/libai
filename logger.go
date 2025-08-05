@@ -147,6 +147,9 @@ func NewLoggerBuilder() *LoggerBuilder {
 	return &LoggerBuilder{}
 }
 func (b *LoggerBuilder) mongoToDSN() string {
+	if b.mongo.username == "" && b.mongo.password == "" {
+		return fmt.Sprintf("mongodb://%s:%d", b.mongo.host, b.mongo.port)
+	}
 	return fmt.Sprintf("mongodb://%s:%s@%s:%d", b.mongo.username, b.mongo.password, b.mongo.host, b.mongo.port)
 }
 
