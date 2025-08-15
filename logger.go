@@ -129,6 +129,17 @@ func (l *Logger) Z() *LoggerZapWrapper {
 	return l.wrap
 }
 
+func (l *Logger) Zap() *zap.Logger {
+	if l.zapLogger == nil {
+		if l.isDebug {
+			l.zapLogger, _ = zap.NewDevelopment()
+		} else {
+			l.zapLogger, _ = zap.NewProduction()
+		}
+	}
+	return l.zapLogger
+}
+
 type LoggerBuilder struct {
 	mongo struct {
 		host       string
