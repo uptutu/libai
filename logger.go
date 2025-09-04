@@ -122,6 +122,11 @@ func (l *Logger) Info(action string, flag string, content any) {
 	l.log("info", action, flag, content)
 }
 
+func (l *Logger) Fatal(action string, flag string, content any) {
+	l.log("fatal", action, flag, content)
+	panic(fmt.Sprintf("Fatal log: %s - %s", action, content))
+}
+
 func (l *Logger) Z() *LoggerZapWrapper {
 	if l.wrap == nil {
 		l.wrap = &LoggerZapWrapper{Logger: l}
