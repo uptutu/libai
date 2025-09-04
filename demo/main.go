@@ -6,10 +6,14 @@ import (
 )
 
 func main() {
-	fmt.Println("=== libai 链式日志库 zap 集成完整演示 ===")
+	fmt.Println("=== libai 链式日志库 完整演示 ===")
 
 	// 演示 zap 集成
 	libai.DemoZapIntegration()
+	
+	// 演示文件输出增强功能
+	fmt.Println()
+	libai.DemoFileOutputEnhancements()
 	
 	// 简单的对比演示
 	fmt.Println("\n=== 新老 API 对比 ===")

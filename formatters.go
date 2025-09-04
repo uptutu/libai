@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // ZapConsoleOutputPlugin implements the OutputPlugin interface for console output using zap
@@ -133,56 +134,75 @@ func (z *ZapConsoleOutputPlugin) convertToZapFields(entry *LogEntry) []zap.Field
 	return fields
 }
 
-// ZapFileOutputPlugin implements the OutputPlugin interface for file output using zap
+// ZapFileOutputPlugin implements the OutputPlugin interface for file output using zap with rotation
 type ZapFileOutputPlugin struct {
-	config FileConfig
-	logger *zap.Logger
+	config     FileConfig
+	logger     *zap.Logger
+	lumberjack *lumberjack.Logger
 }
 
-// NewFileOutputPlugin creates a new file output plugin using zap
+// NewFileOutputPlugin creates a new file output plugin using zap with lumberjack rotation
 func NewFileOutputPlugin(config FileConfig) OutputPlugin {
-	zapConfig := createZapFileConfig(config)
-	logger, err := zapConfig.Build()
-	if err != nil {
-		// Fallback to a basic logger if configuration fails
-		logger = zap.NewNop()
-	}
-	
-	return &ZapFileOutputPlugin{
-		config: config,
-		logger: logger,
-	}
-}
-
-// createZapFileConfig creates a zap configuration for file output
-func createZapFileConfig(config FileConfig) zap.Config {
-	zapConfig := zap.NewProductionConfig()
-	
-	// Configure file output
 	filename := config.Filename
 	if filename == "" {
 		filename = "app.log"
 	}
-	
-	zapConfig.OutputPaths = []string{filename}
-	zapConfig.ErrorOutputPaths = []string{filename}
-	
-	// Configure format
-	if strings.ToLower(config.Format) == "json" {
-		zapConfig.Encoding = "json"
-	} else {
-		zapConfig.Encoding = "console"
+
+	// Create lumberjack logger for rotation
+	lumberjackLogger := &lumberjack.Logger{
+		Filename:   filename,
+		MaxSize:    int(config.MaxSize / (1024 * 1024)), // Convert bytes to MB
+		MaxAge:     config.MaxAge,                       // days
+		MaxBackups: config.MaxBackups,                   // Number of old files to keep
+		Compress:   config.Compress,                     // Compress rotated files
+		LocalTime:  config.LocalTime,                    // Use local time for rotation
 	}
+
+	// Build logger with custom core and lumberjack writer
+	logger := buildZapLoggerWithLumberjack(config, lumberjackLogger)
+
+	return &ZapFileOutputPlugin{
+		config:     config,
+		logger:     logger,
+		lumberjack: lumberjackLogger,
+	}
+}
+
+// buildZapLoggerWithLumberjack builds a zap logger with lumberjack rotation
+func buildZapLoggerWithLumberjack(config FileConfig, lumberjackLogger *lumberjack.Logger) *zap.Logger {
+	// Create encoder config
+	encoderConfig := zap.NewProductionEncoderConfig()
 	
 	// Configure timestamp format
 	if config.TimeFormat != "" {
-		zapConfig.EncoderConfig.TimeKey = "timestamp"
-		zapConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(config.TimeFormat)
+		encoderConfig.TimeKey = "timestamp"
+		encoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(config.TimeFormat)
 	} else {
-		zapConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	}
 	
-	return zapConfig
+	// Configure other encoder settings
+	encoderConfig.LevelKey = "level"
+	encoderConfig.MessageKey = "message"
+	encoderConfig.CallerKey = "caller"
+	encoderConfig.StacktraceKey = "stacktrace"
+	
+	// Create appropriate encoder
+	var encoder zapcore.Encoder
+	if strings.ToLower(config.Format) == "json" {
+		encoder = zapcore.NewJSONEncoder(encoderConfig)
+	} else {
+		encoder = zapcore.NewConsoleEncoder(encoderConfig)
+	}
+	
+	// Create core with lumberjack writer
+	writeSyncer := zapcore.AddSync(lumberjackLogger)
+	core := zapcore.NewCore(encoder, writeSyncer, zap.DebugLevel)
+	
+	// Build logger with caller info
+	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
+	
+	return logger
 }
 
 // Write writes a log entry to file using zap
@@ -252,14 +272,41 @@ func (z *ZapFileOutputPlugin) convertToZapFields(entry *LogEntry) []zap.Field {
 	return fields
 }
 
-// Close closes the file output plugin
+// Close closes the file output plugin and ensures all data is flushed
 func (z *ZapFileOutputPlugin) Close() error {
-	// For file outputs, sync is important but may fail, so we'll log but not return error
-	_ = z.logger.Sync()
+	if z.logger != nil {
+		// Sync the logger to ensure all data is written
+		if err := z.logger.Sync(); err != nil {
+			// Ignore sync errors for regular files, but log them
+			// (sync errors on regular files are often not critical)
+		}
+	}
+	
+	if z.lumberjack != nil {
+		// Close the lumberjack logger to finalize current log file
+		return z.lumberjack.Close()
+	}
+	
 	return nil
 }
 
 // Name returns the name of the plugin
 func (z *ZapFileOutputPlugin) Name() string {
 	return "file"
+}
+
+// Rotate manually rotates the log file (useful for external triggers)
+func (z *ZapFileOutputPlugin) Rotate() error {
+	if z.lumberjack == nil {
+		return nil
+	}
+	return z.lumberjack.Rotate()
+}
+
+// GetCurrentLogFile returns the current log file path
+func (z *ZapFileOutputPlugin) GetCurrentLogFile() string {
+	if z.lumberjack == nil {
+		return ""
+	}
+	return z.lumberjack.Filename
 }

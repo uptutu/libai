@@ -42,9 +42,13 @@ type FileConfig struct {
 	Filename   string `json:"filename" yaml:"filename"`
 	Format     string `json:"format" yaml:"format"` // "text" or "json"
 	TimeFormat string `json:"time_format" yaml:"time_format"`
-	MaxSize    int64  `json:"max_size" yaml:"max_size"`   // bytes
-	MaxAge     int    `json:"max_age" yaml:"max_age"`     // days
-	Compress   bool   `json:"compress" yaml:"compress"`
+	
+	// Rotation settings
+	MaxSize    int64 `json:"max_size" yaml:"max_size"`       // Maximum size in bytes before rotation
+	MaxAge     int   `json:"max_age" yaml:"max_age"`         // Maximum age in days before deletion
+	MaxBackups int   `json:"max_backups" yaml:"max_backups"` // Maximum number of old files to keep
+	Compress   bool  `json:"compress" yaml:"compress"`       // Whether to compress rotated files
+	LocalTime  bool  `json:"local_time" yaml:"local_time"`   // Use local time for rotation
 }
 
 // DatabaseConfig contains database output configuration
@@ -91,10 +95,13 @@ func DefaultConfig() *Config {
 			TimeFormat: time.RFC3339,
 		},
 		File: FileConfig{
-			Enabled: false,
-			Format:  "json",
-			MaxSize: 100 * 1024 * 1024, // 100MB
-			MaxAge:  7,                  // 7 days
+			Enabled:    false,
+			Format:     "json",
+			MaxSize:    100 * 1024 * 1024, // 100MB
+			MaxAge:     7,                  // 7 days
+			MaxBackups: 5,                  // Keep 5 old files
+			Compress:   true,               // Compress rotated files
+			LocalTime:  true,               // Use local time
 		},
 		Database: DatabaseConfig{
 			Enabled:   false,
