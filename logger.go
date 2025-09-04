@@ -129,7 +129,9 @@ func (l *Logger) Fatal(action string, flag string, content any) {
 
 func (l *Logger) Z() *LoggerZapWrapper {
 	if l.wrap == nil {
-		l.wrap = &LoggerZapWrapper{Logger: l}
+		l.wrap = &LoggerZapWrapper{
+			logger: l,
+		}
 	}
 	return l.wrap
 }
@@ -195,6 +197,7 @@ func (b *LoggerBuilder) SetStackTrace(enable bool) *LoggerBuilder {
 	return b
 }
 
+// Build creates both the legacy and new chain logger for backward compatibility
 func (b *LoggerBuilder) Build() (*Logger, error) {
 	if b.origin == "" {
 		return nil, fmt.Errorf("origin must be set")
@@ -235,37 +238,35 @@ func (b *LoggerBuilder) Build() (*Logger, error) {
 	return logger, nil
 }
 
-type LoggerZapWrapper struct {
-	*Logger
-}
-
-func (l *LoggerZapWrapper) Warn(action string, flag string, content any) {
-	fields := []zap.Field{zap.String("flag", flag), zap.Any("content", content)}
-	if l.enableStack {
-		fields = append(fields, zap.String("stack_trace", l.getStackTrace()))
+// BuildChain creates a new ChainLogger instance
+func (b *LoggerBuilder) BuildChain() (ChainLogger, error) {
+	if b.origin == "" {
+		return nil, fmt.Errorf("origin must be set")
 	}
-	l.zapLogger.Warn(action, fields...)
-}
-
-func (l *LoggerZapWrapper) Debug(action string, flag string, content any) {
-	if !l.isDebug {
-		return
+	
+	// Create config from builder settings
+	config := DefaultConfig()
+	config.Origin = b.origin
+	config.EnableStack = b.enableStack
+	
+	// Set log level based on debug mode
+	if b.isDebug {
+		config.Level = DebugLevel
+	} else {
+		config.Level = InfoLevel
 	}
-	fields := []zap.Field{zap.String("flag", flag), zap.Any("content", content)}
-	if l.enableStack {
-		fields = append(fields, zap.String("stack_trace", l.getStackTrace()))
+	
+	// Configure database if mongo settings exist
+	if b.mongo.host != "" {
+		config.Database.Enabled = true
+		config.Database.Driver = MongoDB
+		config.Database.Host = b.mongo.host
+		config.Database.Port = b.mongo.port
+		config.Database.Username = b.mongo.username
+		config.Database.Password = b.mongo.password
+		config.Database.Database = b.mongo.database
+		config.Database.Collection = b.mongo.collection
 	}
-	l.zapLogger.Debug(action, fields...)
-}
-
-func (l *LoggerZapWrapper) Error(action string, flag string, content any) {
-	fields := []zap.Field{zap.String("flag", flag), zap.Any("content", content)}
-	if l.enableStack {
-		fields = append(fields, zap.String("stack_trace", l.getStackTrace()))
-	}
-	l.zapLogger.Error(action, fields...)
-}
-
-func (l *LoggerZapWrapper) Info(action string, flag string, content any) {
-	l.zapLogger.Info(action, zap.String("flag", flag), zap.Any("content", content))
+	
+	return NewChainLogger(config)
 }
