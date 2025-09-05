@@ -1,10 +1,12 @@
-package libai
+package main
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
+
+	"local.git/libs/libai.git"
 )
 
 // DemoFileOutputEnhancements demonstrates the enhanced file output capabilities
@@ -23,7 +25,7 @@ func DemoFileOutputEnhancements() {
 
 	// Demo 1: Basic file output with JSON format
 	fmt.Println("\n1. Basic JSON File Output:")
-	jsonConfig := DefaultConfig()
+	jsonConfig := libai.DefaultConfig()
 	jsonConfig.Origin = "json-file-demo"
 	jsonConfig.Console.Enabled = false
 	jsonConfig.File.Enabled = true
@@ -31,7 +33,7 @@ func DemoFileOutputEnhancements() {
 	jsonConfig.File.Format = "json"
 	jsonConfig.File.TimeFormat = time.RFC3339
 
-	jsonLogger, _ := NewChainLogger(jsonConfig)
+	jsonLogger, _ := libai.NewChainLogger(jsonConfig)
 
 	jsonLogger.Info().
 		Msg("Application started").
@@ -52,7 +54,7 @@ func DemoFileOutputEnhancements() {
 
 	// Demo 2: Text format file output
 	fmt.Println("\n2. Text Format File Output:")
-	textConfig := DefaultConfig()
+	textConfig := libai.DefaultConfig()
 	textConfig.Origin = "text-file-demo"
 	textConfig.Console.Enabled = false
 	textConfig.File.Enabled = true
@@ -60,7 +62,7 @@ func DemoFileOutputEnhancements() {
 	textConfig.File.Format = "text"
 	textConfig.File.TimeFormat = "2006-01-02 15:04:05"
 
-	textLogger, _ := NewChainLogger(textConfig)
+	textLogger, _ := libai.NewChainLogger(textConfig)
 
 	textLogger.Info().Msg("User authentication successful").Str("user", "alice").Log()
 	textLogger.Error().Msg("Database connection failed").Str("host", "localhost").Int("port", 5432).Log()
@@ -70,7 +72,7 @@ func DemoFileOutputEnhancements() {
 
 	// Demo 3: File rotation configuration
 	fmt.Println("\n3. File Output with Rotation Settings:")
-	rotationConfig := DefaultConfig()
+	rotationConfig := libai.DefaultConfig()
 	rotationConfig.Origin = "rotation-demo"
 	rotationConfig.Console.Enabled = false
 	rotationConfig.File.Enabled = true
@@ -82,7 +84,7 @@ func DemoFileOutputEnhancements() {
 	rotationConfig.File.Compress = true     // Compress rotated files
 	rotationConfig.File.LocalTime = true    // Use local time
 
-	rotLogger, _ := NewChainLogger(rotationConfig)
+	rotLogger, _ := libai.NewChainLogger(rotationConfig)
 
 	fmt.Printf("Configuration:\n")
 	fmt.Printf("  - Max Size: %d bytes (%.1f KB)\n", rotationConfig.File.MaxSize, float64(rotationConfig.File.MaxSize)/1024)
@@ -112,14 +114,14 @@ func DemoFileOutputEnhancements() {
 
 	// Demo 4: Context logging with file output
 	fmt.Println("\n4. Context Logging to File:")
-	contextConfig := DefaultConfig()
+	contextConfig := libai.DefaultConfig()
 	contextConfig.Origin = "context-demo"
 	contextConfig.Console.Enabled = false
 	contextConfig.File.Enabled = true
 	contextConfig.File.Filename = filepath.Join(tempDir, "context.log")
 	contextConfig.File.Format = "json"
 
-	contextLogger, _ := NewChainLogger(contextConfig)
+	contextLogger, _ := libai.NewChainLogger(contextConfig)
 
 	// Create session-specific logger with context
 	sessionLogger := contextLogger.WithFields(map[string]interface{}{

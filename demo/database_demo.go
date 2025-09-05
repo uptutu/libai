@@ -1,9 +1,11 @@
-package libai
+package main
 
 import (
 	"fmt"
 	"os"
 	"time"
+
+	"local.git/libs/libai.git"
 )
 
 // DemoDatabaseOutput demonstrates the database output capabilities
@@ -37,18 +39,18 @@ func DemoDatabaseOutput() {
 
 // demoMongoDBOutput demonstrates MongoDB logging
 func demoMongoDBOutput() {
-	config := DefaultConfig()
+	config := libai.DefaultConfig()
 	config.Origin = "mongodb-demo"
 	config.Console.Enabled = true // Keep console for demo visibility
 	config.Database.Enabled = true
-	config.Database.Driver = MongoDB
+	config.Database.Driver = libai.MongoDB
 	config.Database.Host = "localhost"
 	config.Database.Port = 27017
 	config.Database.Database = "libai_demo"
 	config.Database.Collection = "demo_logs"
 	config.Database.BatchSize = 5
 
-	logger, err := NewChainLogger(config)
+	logger, err := libai.NewChainLogger(config)
 	if err != nil {
 		fmt.Printf("❌ Failed to create MongoDB logger: %v\n", err)
 		fmt.Println("💡 Make sure MongoDB is running on localhost:27017")
@@ -98,11 +100,11 @@ func demoMongoDBOutput() {
 
 // demoMySQLOutput demonstrates MySQL logging
 func demoMySQLOutput() {
-	config := DefaultConfig()
+	config := libai.DefaultConfig()
 	config.Origin = "mysql-demo"
 	config.Console.Enabled = true // Keep console for demo visibility
 	config.Database.Enabled = true
-	config.Database.Driver = MySQL
+	config.Database.Driver = libai.MySQL
 	config.Database.Host = "localhost"
 	config.Database.Port = 3306
 	config.Database.Username = "root"
@@ -111,7 +113,7 @@ func demoMySQLOutput() {
 	config.Database.Table = "demo_logs"
 	config.Database.BatchSize = 3
 
-	logger, err := NewChainLogger(config)
+	logger, err := libai.NewChainLogger(config)
 	if err != nil {
 		fmt.Printf("❌ Failed to create MySQL logger: %v\n", err)
 		fmt.Println("💡 Make sure MySQL is running with correct credentials")
@@ -139,7 +141,7 @@ func demoMySQLOutput() {
 		Int("status_code", 200).
 		Dur("response_time", 45*time.Millisecond).
 		ToDB(). // Explicitly target database
-		WithDatabase(MySQL).
+		WithDatabase(libai.MySQL).
 		Log()
 
 	logger.Warn().
@@ -164,18 +166,18 @@ func demoMySQLOutput() {
 
 // demoDatabaseBatching demonstrates batch processing with high volume
 func demoDatabaseBatching() {
-	config := DefaultConfig()
+	config := libai.DefaultConfig()
 	config.Origin = "batch-demo"
 	config.Console.Enabled = false // Disable console to focus on database
 	config.Database.Enabled = true
-	config.Database.Driver = MongoDB
+	config.Database.Driver = libai.MongoDB
 	config.Database.Host = "localhost"
 	config.Database.Port = 27017
 	config.Database.Database = "libai_demo"
 	config.Database.Collection = "batch_demo"
 	config.Database.BatchSize = 10 // Process in batches of 10
 
-	logger, err := NewChainLogger(config)
+	logger, err := libai.NewChainLogger(config)
 	if err != nil {
 		fmt.Printf("❌ Failed to create batch demo logger: %v\n", err)
 		return
@@ -220,18 +222,18 @@ func demoDatabaseBatching() {
 
 // demoDatabaseContextLogging demonstrates context logging with database output
 func demoDatabaseContextLogging() {
-	config := DefaultConfig()
+	config := libai.DefaultConfig()
 	config.Origin = "context-demo"
 	config.Console.Enabled = true // Show on console too
 	config.Database.Enabled = true
-	config.Database.Driver = MongoDB
+	config.Database.Driver = libai.MongoDB
 	config.Database.Host = "localhost"
 	config.Database.Port = 27017
 	config.Database.Database = "libai_demo"
 	config.Database.Collection = "context_demo"
 	config.Database.BatchSize = 5
 
-	logger, err := NewChainLogger(config)
+	logger, err := libai.NewChainLogger(config)
 	if err != nil {
 		fmt.Printf("❌ Failed to create context demo logger: %v\n", err)
 		return
@@ -304,20 +306,20 @@ func DemoDatabaseHealth() {
 
 	// Test MongoDB health
 	fmt.Println("\n1. MongoDB Health Check:")
-	mongoConfig := DatabaseConfig{
+	mongoConfig := libai.DatabaseConfig{
 		Enabled:    true,
-		Driver:     MongoDB,
+		Driver:     libai.MongoDB,
 		Host:       "localhost",
 		Port:       27017,
 		Database:   "health_test",
 		Collection: "test_logs",
 	}
 
-	plugin, err := NewDatabaseOutputPlugin(mongoConfig)
+	plugin, err := libai.NewDatabaseOutputPlugin(mongoConfig)
 	if err != nil {
 		fmt.Printf("❌ MongoDB connection failed: %v\n", err)
 	} else {
-		dbPlugin := plugin.(*DatabaseOutputPlugin)
+		dbPlugin := plugin.(*libai.DatabaseOutputPlugin)
 		if err := dbPlugin.Ping(); err != nil {
 			fmt.Printf("❌ MongoDB ping failed: %v\n", err)
 		} else {
@@ -330,9 +332,9 @@ func DemoDatabaseHealth() {
 
 	// Test MySQL health
 	fmt.Println("\n2. MySQL Health Check:")
-	mysqlConfig := DatabaseConfig{
+	mysqlConfig := libai.DatabaseConfig{
 		Enabled:  true,
-		Driver:   MySQL,
+		Driver:   libai.MySQL,
 		Host:     "localhost",
 		Port:     3306,
 		Username: "root",
@@ -341,11 +343,11 @@ func DemoDatabaseHealth() {
 		Table:    "test_logs",
 	}
 
-	plugin, err = NewDatabaseOutputPlugin(mysqlConfig)
+	plugin, err = libai.NewDatabaseOutputPlugin(mysqlConfig)
 	if err != nil {
 		fmt.Printf("❌ MySQL connection failed: %v\n", err)
 	} else {
-		dbPlugin := plugin.(*DatabaseOutputPlugin)
+		dbPlugin := plugin.(*libai.DatabaseOutputPlugin)
 		if err := dbPlugin.Ping(); err != nil {
 			fmt.Printf("❌ MySQL ping failed: %v\n", err)
 		} else {

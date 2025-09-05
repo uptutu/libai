@@ -1,9 +1,11 @@
-package libai
+package main
 
 import (
 	"fmt"
 	"os"
 	"time"
+
+	"local.git/libs/libai.git"
 )
 
 func DemoZapIntegration() {
@@ -11,15 +13,15 @@ func DemoZapIntegration() {
 
 	// 1. 控制台彩色文本输出
 	fmt.Println("1. 控制台彩色文本输出:")
-	textConfig := DefaultConfig()
+	textConfig := libai.DefaultConfig()
 	textConfig.Origin = "demo-app"
-	textConfig.Level = DebugLevel
+	textConfig.Level = libai.DebugLevel
 	textConfig.Console.Enabled = true
 	textConfig.Console.Format = "text"
 	textConfig.Console.Colorized = true
 	textConfig.EnableStack = true
 
-	textLogger, _ := NewChainLogger(textConfig)
+	textLogger, _ := libai.NewChainLogger(textConfig)
 
 	textLogger.Debug().Msg("系统调试信息").Str("component", "auth").Int("user_count", 1250).Log()
 	textLogger.Info().Msg("用户登录成功").Str("user", "张三").Str("ip", "192.168.1.100").Time("login_time", time.Now()).Log()
@@ -30,13 +32,13 @@ func DemoZapIntegration() {
 
 	fmt.Println("\n2. 控制台 JSON 格式输出:")
 	// 2. 控制台 JSON 输出
-	jsonConfig := DefaultConfig()
+	jsonConfig := libai.DefaultConfig()
 	jsonConfig.Origin = "api-service"
 	jsonConfig.Console.Enabled = true
 	jsonConfig.Console.Format = "json"
 	jsonConfig.Console.Colorized = false
 
-	jsonLogger, _ := NewChainLogger(jsonConfig)
+	jsonLogger, _ := libai.NewChainLogger(jsonConfig)
 
 	jsonLogger.Info().
 		Msg("API请求处理完成").
@@ -54,14 +56,14 @@ func DemoZapIntegration() {
 
 	fmt.Println("\n3. 文件输出演示:")
 	// 3. 文件输出
-	fileConfig := DefaultConfig()
+	fileConfig := libai.DefaultConfig()
 	fileConfig.Origin = "file-service"
 	fileConfig.Console.Enabled = false
 	fileConfig.File.Enabled = true
 	fileConfig.File.Filename = "/tmp/libai-demo.log"
 	fileConfig.File.Format = "json"
 
-	fileLogger, _ := NewChainLogger(fileConfig)
+	fileLogger, _ := libai.NewChainLogger(fileConfig)
 
 	fileLogger.Info().
 		Msg("数据处理任务完成").
@@ -82,13 +84,13 @@ func DemoZapIntegration() {
 
 	fmt.Println("\n4. 向后兼容性演示:")
 	// 4. 向后兼容性
-	legacyConfig := DefaultConfig()
+	legacyConfig := libai.DefaultConfig()
 	legacyConfig.Origin = "legacy-app"
 	legacyConfig.Console.Enabled = true
 	legacyConfig.Console.Format = "text"
 	legacyConfig.Console.Colorized = true
 
-	chainLogger, _ := NewChainLogger(legacyConfig)
+	chainLogger, _ := libai.NewChainLogger(legacyConfig)
 	legacyLogger := chainLogger.Legacy()
 
 	// 使用旧的 API 风格
@@ -108,13 +110,13 @@ func DemoZapIntegration() {
 
 	fmt.Println("\n5. 上下文字段演示:")
 	// 5. 上下文字段
-	contextConfig := DefaultConfig()
+	contextConfig := libai.DefaultConfig()
 	contextConfig.Origin = "context-app"
 	contextConfig.Console.Enabled = true
 	contextConfig.Console.Format = "text"
 	contextConfig.Console.Colorized = true
 
-	contextLogger, _ := NewChainLogger(contextConfig)
+	contextLogger, _ := libai.NewChainLogger(contextConfig)
 
 	// 创建带上下文的日志器
 	sessionLogger := contextLogger.WithFields(map[string]interface{}{

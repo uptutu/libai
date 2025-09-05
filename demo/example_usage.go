@@ -1,10 +1,12 @@
-package libai
+package main
 
 import (
 	"errors"
 	"fmt"
 	"log"
 	"time"
+
+	"local.git/libs/libai.git"
 )
 
 func main() {
@@ -38,7 +40,7 @@ func main() {
 
 func testLegacyLogger() {
 	// Create legacy logger using existing API
-	logger, err := NewLoggerBuilder().
+	logger, err := libai.NewLoggerBuilder().
 		SetOrigin("legacy-app").
 		SetDebugMode().
 		SetStackTrace(true).
@@ -66,7 +68,7 @@ func testLegacyLogger() {
 
 func testChainLogger() {
 	// Create new chain logger
-	chainLogger, err := NewLoggerBuilder().
+	chainLogger, err := libai.NewLoggerBuilder().
 		SetOrigin("chain-app").
 		SetDebugMode().
 		SetStackTrace(true).
@@ -114,7 +116,7 @@ func testChainLogger() {
 
 func testLegacyWrapperFromChainLogger() {
 	// Create chain logger and get legacy wrapper
-	chainLogger, err := NewLoggerBuilder().
+	chainLogger, err := libai.NewLoggerBuilder().
 		SetOrigin("hybrid-app").
 		SetDebugMode().
 		BuildChain()
@@ -144,12 +146,12 @@ func testLegacyWrapperFromChainLogger() {
 
 func testJSONFormatting() {
 	// Create config with JSON formatting
-	config := DefaultConfig()
+	config := libai.DefaultConfig()
 	config.Origin = "json-app"
 	config.Console.Format = "json"
 	config.Console.Colorized = false // JSON output shouldn't be colorized
 
-	chainLogger, err := NewChainLogger(config)
+	chainLogger, err := libai.NewChainLogger(config)
 	if err != nil {
 		log.Fatal("Failed to create JSON logger:", err)
 	}
@@ -170,7 +172,7 @@ func testJSONFormatting() {
 }
 
 func testAdvancedChainFeatures() {
-	chainLogger, err := NewLoggerBuilder().
+	chainLogger, err := libai.NewLoggerBuilder().
 		SetOrigin("advanced-app").
 		SetDebugMode().
 		SetStackTrace(true).
@@ -206,7 +208,7 @@ func testAdvancedChainFeatures() {
 		Log()
 
 	// Different log levels with filtering
-	chainLogger.SetLevel(WarnLevel) // Only warn and above will be logged
+	chainLogger.SetLevel(libai.WarnLevel) // Only warn and above will be logged
 
 	chainLogger.Debug().Msg("This won't be logged").Log()           // Filtered out
 	chainLogger.Info().Msg("This won't be logged either").Log()     // Filtered out
@@ -214,7 +216,7 @@ func testAdvancedChainFeatures() {
 	chainLogger.Error().Msg("This will definitely be logged").Log() // Will log
 
 	// Reset to debug level
-	chainLogger.SetLevel(DebugLevel)
+	chainLogger.SetLevel(libai.DebugLevel)
 
 	// Using With() for single field context
 	chainLogger.With().
@@ -229,7 +231,7 @@ func testAdvancedChainFeatures() {
 // Demonstrate creating logger without MongoDB
 func createSimpleLogger() {
 	// Simple console-only logger
-	logger, err := NewLoggerBuilder().
+	logger, err := libai.NewLoggerBuilder().
 		SetOrigin("simple-app").
 		BuildChain()
 
@@ -244,7 +246,7 @@ func createSimpleLogger() {
 // Demonstrate error handling
 func demonstrateErrorHandling() {
 	// Try to create logger with invalid config
-	_, err := NewLoggerBuilder().BuildChain() // Missing origin
+	_, err := libai.NewLoggerBuilder().BuildChain() // Missing origin
 
 	if err != nil {
 		fmt.Printf("Expected error: %v\n", err)
