@@ -10,27 +10,27 @@ import (
 func main() {
 	fmt.Println("=== Libai Chain-Style Logging Library Demo ===")
 	fmt.Println()
-	
+
 	// Test 1: Legacy Logger (Backward Compatibility)
 	fmt.Println("=== 1. Legacy Logger (Existing API) ===")
 	testLegacyLogger()
-	
+
 	// Test 2: New Chain Logger
 	fmt.Println("\n=== 2. New Chain Logger API ===")
 	testChainLogger()
-	
+
 	// Test 3: Using Legacy API through Chain Logger
 	fmt.Println("\n=== 3. Legacy API via Chain Logger ===")
 	testLegacyWrapperFromChainLogger()
-	
+
 	// Test 4: JSON Formatting
 	fmt.Println("\n=== 4. JSON Formatting ===")
 	testJSONFormatting()
-	
+
 	// Test 5: Advanced Chain Features
 	fmt.Println("\n=== 5. Advanced Chain Features ===")
 	testAdvancedChainFeatures()
-	
+
 	// Test 6: Zap Integration Demo
 	fmt.Println("\n=== 6. Zap Integration Demo ===")
 	DemoZapIntegration()
@@ -126,7 +126,7 @@ func testLegacyWrapperFromChainLogger() {
 
 	// Use legacy API through chain logger
 	legacyLogger := chainLogger.Legacy()
-	
+
 	legacyLogger.Info("user_action", "page_view", map[string]interface{}{
 		"page":    "/dashboard",
 		"user_id": 67890,
@@ -208,10 +208,10 @@ func testAdvancedChainFeatures() {
 	// Different log levels with filtering
 	chainLogger.SetLevel(WarnLevel) // Only warn and above will be logged
 
-	chainLogger.Debug().Msg("This won't be logged").Log()                     // Filtered out
-	chainLogger.Info().Msg("This won't be logged either").Log()               // Filtered out
-	chainLogger.Warn().Msg("This will be logged").Log()                       // Will log
-	chainLogger.Error().Msg("This will definitely be logged").Log()           // Will log
+	chainLogger.Debug().Msg("This won't be logged").Log()           // Filtered out
+	chainLogger.Info().Msg("This won't be logged either").Log()     // Filtered out
+	chainLogger.Warn().Msg("This will be logged").Log()             // Will log
+	chainLogger.Error().Msg("This will definitely be logged").Log() // Will log
 
 	// Reset to debug level
 	chainLogger.SetLevel(DebugLevel)

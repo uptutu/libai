@@ -10,7 +10,7 @@ import (
 // DemoFileOutputEnhancements demonstrates the enhanced file output capabilities
 func DemoFileOutputEnhancements() {
 	fmt.Println("=== File Output Enhancement Demo ===")
-	
+
 	// Create a temporary directory for demo logs
 	tempDir, err := os.MkdirTemp("", "libai_file_demo_")
 	if err != nil {
@@ -18,7 +18,7 @@ func DemoFileOutputEnhancements() {
 		return
 	}
 	defer os.RemoveAll(tempDir)
-	
+
 	fmt.Printf("Demo logs will be written to: %s\n", tempDir)
 
 	// Demo 1: Basic file output with JSON format
@@ -32,7 +32,7 @@ func DemoFileOutputEnhancements() {
 	jsonConfig.File.TimeFormat = time.RFC3339
 
 	jsonLogger, _ := NewChainLogger(jsonConfig)
-	
+
 	jsonLogger.Info().
 		Msg("Application started").
 		Str("version", "1.0.0").
@@ -40,13 +40,13 @@ func DemoFileOutputEnhancements() {
 		Bool("debug", false).
 		Time("start_time", time.Now()).
 		Log()
-	
+
 	jsonLogger.Warn().
 		Msg("High memory usage detected").
 		Float64("memory_usage_mb", 1024.5).
 		Str("component", "cache").
 		Log()
-	
+
 	jsonLogger.Close()
 	showFileContent(filepath.Join(tempDir, "app.json.log"), "JSON")
 
@@ -61,10 +61,10 @@ func DemoFileOutputEnhancements() {
 	textConfig.File.TimeFormat = "2006-01-02 15:04:05"
 
 	textLogger, _ := NewChainLogger(textConfig)
-	
+
 	textLogger.Info().Msg("User authentication successful").Str("user", "alice").Log()
 	textLogger.Error().Msg("Database connection failed").Str("host", "localhost").Int("port", 5432).Log()
-	
+
 	textLogger.Close()
 	showFileContent(filepath.Join(tempDir, "app.text.log"), "Text")
 
@@ -83,7 +83,7 @@ func DemoFileOutputEnhancements() {
 	rotationConfig.File.LocalTime = true    // Use local time
 
 	rotLogger, _ := NewChainLogger(rotationConfig)
-	
+
 	fmt.Printf("Configuration:\n")
 	fmt.Printf("  - Max Size: %d bytes (%.1f KB)\n", rotationConfig.File.MaxSize, float64(rotationConfig.File.MaxSize)/1024)
 	fmt.Printf("  - Max Age: %d days\n", rotationConfig.File.MaxAge)
@@ -106,7 +106,7 @@ func DemoFileOutputEnhancements() {
 			}).
 			Log()
 	}
-	
+
 	rotLogger.Close()
 	showFileContent(filepath.Join(tempDir, "rotating.log"), "Rotation Demo")
 
@@ -120,21 +120,21 @@ func DemoFileOutputEnhancements() {
 	contextConfig.File.Format = "json"
 
 	contextLogger, _ := NewChainLogger(contextConfig)
-	
+
 	// Create session-specific logger with context
 	sessionLogger := contextLogger.WithFields(map[string]interface{}{
-		"session_id":   "sess_abc123",
-		"user_id":      12345,
-		"request_id":   "req_xyz789",
-		"ip_address":   "192.168.1.100",
-		"user_agent":   "libai-demo/1.0",
+		"session_id": "sess_abc123",
+		"user_id":    12345,
+		"request_id": "req_xyz789",
+		"ip_address": "192.168.1.100",
+		"user_agent": "libai-demo/1.0",
 	})
 
 	sessionLogger.Info().Msg("User session started").Str("action", "login").Log()
 	sessionLogger.Info().Msg("Page accessed").Str("page", "/dashboard").Time("access_time", time.Now()).Log()
 	sessionLogger.Warn().Msg("Slow query detected").Str("query", "SELECT * FROM users").Dur("duration", 2*time.Second).Log()
 	sessionLogger.Info().Msg("User session ended").Str("action", "logout").Log()
-	
+
 	contextLogger.Close()
 	showFileContent(filepath.Join(tempDir, "context.log"), "Context Logging")
 
@@ -156,7 +156,7 @@ func showFileContent(filename, title string) {
 		contentStr = contentStr[:500] + "..."
 	}
 	fmt.Printf("%s\n", contentStr)
-	
+
 	// Show file info
 	if info, err := os.Stat(filename); err == nil {
 		fmt.Printf("File size: %d bytes\n", info.Size())

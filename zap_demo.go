@@ -93,8 +93,8 @@ func DemoZapIntegration() {
 
 	// 使用旧的 API 风格
 	legacyLogger.Info("user_registration", "success", map[string]interface{}{
-		"user_id":    12345,
-		"username":   "王五",
+		"user_id":     12345,
+		"username":    "王五",
 		"register_ip": "192.168.1.200",
 	})
 

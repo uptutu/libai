@@ -11,19 +11,19 @@ type Config struct {
 	Origin      string   `json:"origin" yaml:"origin"`
 	Level       LogLevel `json:"level" yaml:"level"`
 	EnableStack bool     `json:"enable_stack" yaml:"enable_stack"`
-	
+
 	// Console output settings
 	Console ConsoleConfig `json:"console" yaml:"console"`
-	
+
 	// File output settings
 	File FileConfig `json:"file" yaml:"file"`
-	
+
 	// Database settings
 	Database DatabaseConfig `json:"database" yaml:"database"`
-	
+
 	// Message queue settings
 	MessageQueue MessageQueueConfig `json:"message_queue" yaml:"message_queue"`
-	
+
 	// Performance settings
 	Performance PerformanceConfig `json:"performance" yaml:"performance"`
 }
@@ -42,7 +42,7 @@ type FileConfig struct {
 	Filename   string `json:"filename" yaml:"filename"`
 	Format     string `json:"format" yaml:"format"` // "text" or "json"
 	TimeFormat string `json:"time_format" yaml:"time_format"`
-	
+
 	// Rotation settings
 	MaxSize    int64 `json:"max_size" yaml:"max_size"`       // Maximum size in bytes before rotation
 	MaxAge     int   `json:"max_age" yaml:"max_age"`         // Maximum age in days before deletion
@@ -67,12 +67,23 @@ type DatabaseConfig struct {
 
 // MessageQueueConfig contains message queue configuration
 type MessageQueueConfig struct {
-	Enabled   bool              `json:"enabled" yaml:"enabled"`
-	Type      string            `json:"type" yaml:"type"` // "kafka", "rabbitmq", etc.
-	Brokers   []string          `json:"brokers" yaml:"brokers"`
-	Topic     string            `json:"topic" yaml:"topic"`
-	Config    map[string]string `json:"config" yaml:"config"`
-	BatchSize int               `json:"batch_size" yaml:"batch_size"`
+	Enabled       bool                     `json:"enabled" yaml:"enabled"`
+	Provider      string                   `json:"provider" yaml:"provider"`     // Name of the registered MQ provider
+	Topic         string                   `json:"topic" yaml:"topic"`           // Default topic
+	Format        string                   `json:"format" yaml:"format"`         // Message format: "json", "avro", "protobuf", "msgpack"
+	Config        map[string]interface{}   `json:"config" yaml:"config"`         // Provider-specific configuration
+	BatchSize     int                      `json:"batch_size" yaml:"batch_size"` // Messages per batch
+	BufferSize    int                      `json:"buffer_size" yaml:"buffer_size"` // Worker queue buffer size
+	WorkerCount   int                      `json:"worker_count" yaml:"worker_count"` // Number of worker goroutines
+	FlushInterval int                      `json:"flush_interval" yaml:"flush_interval"` // Flush interval in milliseconds
+	Routing       RoutingConfig            `json:"routing" yaml:"routing"`       // Message routing configuration
+	Fallbacks     []FallbackProviderConfig `json:"fallbacks" yaml:"fallbacks"`   // Fallback providers
+}
+
+// FallbackProviderConfig contains fallback provider configuration
+type FallbackProviderConfig struct {
+	Provider string                 `json:"provider" yaml:"provider"` // Name of the fallback provider
+	Config   map[string]interface{} `json:"config" yaml:"config"`     // Provider-specific configuration
 }
 
 // PerformanceConfig contains performance-related settings
@@ -98,18 +109,38 @@ func DefaultConfig() *Config {
 			Enabled:    false,
 			Format:     "json",
 			MaxSize:    100 * 1024 * 1024, // 100MB
-			MaxAge:     7,                  // 7 days
-			MaxBackups: 5,                  // Keep 5 old files
-			Compress:   true,               // Compress rotated files
-			LocalTime:  true,               // Use local time
+			MaxAge:     7,                 // 7 days
+			MaxBackups: 5,                 // Keep 5 old files
+			Compress:   true,              // Compress rotated files
+			LocalTime:  true,              // Use local time
 		},
 		Database: DatabaseConfig{
-			Enabled:   false,
-			BatchSize: 100,
+			Enabled:    false,
+			Driver:     MongoDB,
+			Host:       "localhost",
+			Port:       27017,
+			Database:   "logs",
+			Collection: "app_logs",
+			Table:      "logs",
+			BatchSize:  100,
 		},
 		MessageQueue: MessageQueueConfig{
-			Enabled:   false,
-			BatchSize: 100,
+			Enabled:       false,
+			Provider:      "mock",
+			Topic:         "logs",
+			Format:        "json",
+			BatchSize:     100,
+			BufferSize:    1000,
+			WorkerCount:   2,
+			FlushInterval: 5000, // 5 seconds
+			Config:        make(map[string]interface{}),
+			Routing: RoutingConfig{
+				Strategy:    "default",
+				TopicPrefix: "",
+				Partitions:  1,
+				Headers:     make(map[string]interface{}),
+			},
+			Fallbacks: []FallbackProviderConfig{},
 		},
 		Performance: PerformanceConfig{
 			AsyncOutput:   true,

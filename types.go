@@ -113,12 +113,12 @@ type LogEntry struct {
 	StackTrace string                 `json:"stack_trace,omitempty" bson:"stack_trace,omitempty"`
 	Caller     string                 `json:"caller,omitempty" bson:"caller,omitempty"`
 	Error      error                  `json:"error,omitempty" bson:"error,omitempty"`
-	
+
 	// Output targeting
-	Targets    []OutputType           `json:"-" bson:"-"`
-	Database   *DatabaseDriver       `json:"-" bson:"-"`
-	Filename   string                `json:"-" bson:"-"`
-	Topic      string                `json:"-" bson:"-"`
+	Targets  []OutputType    `json:"-" bson:"-"`
+	Database *DatabaseDriver `json:"-" bson:"-"`
+	Filename string          `json:"-" bson:"-"`
+	Topic    string          `json:"-" bson:"-"`
 }
 
 // NewLogEntry creates a new log entry with default values
@@ -136,16 +136,16 @@ func (e *LogEntry) Copy() *LogEntry {
 	for k, v := range e.Fields {
 		fields[k] = v
 	}
-	
+
 	targets := make([]OutputType, len(e.Targets))
 	copy(targets, e.Targets)
-	
+
 	var database *DatabaseDriver
 	if e.Database != nil {
 		dbCopy := *e.Database
 		database = &dbCopy
 	}
-	
+
 	return &LogEntry{
 		Level:      e.Level,
 		Message:    e.Message,

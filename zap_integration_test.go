@@ -118,7 +118,7 @@ func TestZapIntegration(t *testing.T) {
 		}
 
 		testErr := fmt.Errorf("test error message")
-		
+
 		logger.Error().
 			Msg("Something went wrong").
 			Err(testErr).

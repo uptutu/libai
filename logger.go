@@ -243,19 +243,19 @@ func (b *LoggerBuilder) BuildChain() (ChainLogger, error) {
 	if b.origin == "" {
 		return nil, fmt.Errorf("origin must be set")
 	}
-	
+
 	// Create config from builder settings
 	config := DefaultConfig()
 	config.Origin = b.origin
 	config.EnableStack = b.enableStack
-	
+
 	// Set log level based on debug mode
 	if b.isDebug {
 		config.Level = DebugLevel
 	} else {
 		config.Level = InfoLevel
 	}
-	
+
 	// Configure database if mongo settings exist
 	if b.mongo.host != "" {
 		config.Database.Enabled = true
@@ -267,6 +267,6 @@ func (b *LoggerBuilder) BuildChain() (ChainLogger, error) {
 		config.Database.Database = b.mongo.database
 		config.Database.Collection = b.mongo.collection
 	}
-	
+
 	return NewChainLogger(config)
 }

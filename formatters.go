@@ -23,7 +23,7 @@ func NewConsoleOutputPlugin(config ConsoleConfig) OutputPlugin {
 		// Fallback to a basic logger if configuration fails
 		logger = zap.NewNop()
 	}
-	
+
 	return &ZapConsoleOutputPlugin{
 		config: config,
 		logger: logger,
@@ -34,7 +34,7 @@ func NewConsoleOutputPlugin(config ConsoleConfig) OutputPlugin {
 func (z *ZapConsoleOutputPlugin) Write(ctx context.Context, entry *LogEntry) error {
 	// Convert LogEntry to zap fields
 	fields := z.convertToZapFields(entry)
-	
+
 	// Log using appropriate zap level
 	switch entry.Level {
 	case DebugLevel:
@@ -50,7 +50,7 @@ func (z *ZapConsoleOutputPlugin) Write(ctx context.Context, entry *LogEntry) err
 	default:
 		z.logger.Info(entry.Message, fields...)
 	}
-	
+
 	return nil
 }
 
@@ -66,10 +66,20 @@ func (z *ZapConsoleOutputPlugin) Name() string {
 	return "console"
 }
 
+// GetStats returns statistics about the console output plugin
+func (z *ZapConsoleOutputPlugin) GetStats() map[string]interface{} {
+	return map[string]interface{}{
+		"type":        "console",
+		"format":      z.config.Format,
+		"colorized":   z.config.Colorized,
+		"time_format": z.config.TimeFormat,
+	}
+}
+
 // createZapConfig creates a zap configuration based on ConsoleConfig
 func createZapConfig(config ConsoleConfig) zap.Config {
 	var zapConfig zap.Config
-	
+
 	if strings.ToLower(config.Format) == "json" {
 		zapConfig = zap.NewProductionConfig()
 	} else {
@@ -78,11 +88,11 @@ func createZapConfig(config ConsoleConfig) zap.Config {
 			zapConfig.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		}
 	}
-	
+
 	// Configure output paths
 	zapConfig.OutputPaths = []string{"stdout"}
 	zapConfig.ErrorOutputPaths = []string{"stderr"}
-	
+
 	// Configure timestamp format
 	if config.TimeFormat != "" {
 		zapConfig.EncoderConfig.TimeKey = "timestamp"
@@ -90,39 +100,39 @@ func createZapConfig(config ConsoleConfig) zap.Config {
 	} else {
 		zapConfig.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	}
-	
+
 	return zapConfig
 }
 
 // convertToZapFields converts LogEntry fields to zap fields
 func (z *ZapConsoleOutputPlugin) convertToZapFields(entry *LogEntry) []zap.Field {
 	fields := make([]zap.Field, 0)
-	
+
 	// Add origin
 	if entry.Origin != "" {
 		fields = append(fields, zap.String("origin", entry.Origin))
 	}
-	
+
 	// Add custom fields
 	for k, v := range entry.Fields {
 		fields = append(fields, zap.Any(k, v))
 	}
-	
+
 	// Add error if present
 	if entry.Error != nil {
 		fields = append(fields, zap.Error(entry.Error))
 	}
-	
+
 	// Add caller if present
 	if entry.Caller != "" {
 		fields = append(fields, zap.String("caller", entry.Caller))
 	}
-	
+
 	// Add stack trace if present
 	if entry.StackTrace != "" {
 		fields = append(fields, zap.String("stack_trace", entry.StackTrace))
 	}
-	
+
 	// Add legacy fields for backward compatibility
 	if entry.Action != "" {
 		fields = append(fields, zap.String("action", entry.Action))
@@ -130,7 +140,7 @@ func (z *ZapConsoleOutputPlugin) convertToZapFields(entry *LogEntry) []zap.Field
 	if entry.Flag != "" {
 		fields = append(fields, zap.String("flag", entry.Flag))
 	}
-	
+
 	return fields
 }
 
@@ -172,7 +182,7 @@ func NewFileOutputPlugin(config FileConfig) OutputPlugin {
 func buildZapLoggerWithLumberjack(config FileConfig, lumberjackLogger *lumberjack.Logger) *zap.Logger {
 	// Create encoder config
 	encoderConfig := zap.NewProductionEncoderConfig()
-	
+
 	// Configure timestamp format
 	if config.TimeFormat != "" {
 		encoderConfig.TimeKey = "timestamp"
@@ -180,13 +190,13 @@ func buildZapLoggerWithLumberjack(config FileConfig, lumberjackLogger *lumberjac
 	} else {
 		encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	}
-	
+
 	// Configure other encoder settings
 	encoderConfig.LevelKey = "level"
 	encoderConfig.MessageKey = "message"
 	encoderConfig.CallerKey = "caller"
 	encoderConfig.StacktraceKey = "stacktrace"
-	
+
 	// Create appropriate encoder
 	var encoder zapcore.Encoder
 	if strings.ToLower(config.Format) == "json" {
@@ -194,14 +204,14 @@ func buildZapLoggerWithLumberjack(config FileConfig, lumberjackLogger *lumberjac
 	} else {
 		encoder = zapcore.NewConsoleEncoder(encoderConfig)
 	}
-	
+
 	// Create core with lumberjack writer
 	writeSyncer := zapcore.AddSync(lumberjackLogger)
 	core := zapcore.NewCore(encoder, writeSyncer, zap.DebugLevel)
-	
+
 	// Build logger with caller info
 	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
-	
+
 	return logger
 }
 
@@ -209,7 +219,7 @@ func buildZapLoggerWithLumberjack(config FileConfig, lumberjackLogger *lumberjac
 func (z *ZapFileOutputPlugin) Write(ctx context.Context, entry *LogEntry) error {
 	// Convert LogEntry to zap fields
 	fields := z.convertToZapFields(entry)
-	
+
 	// Log using appropriate zap level
 	switch entry.Level {
 	case DebugLevel:
@@ -225,39 +235,39 @@ func (z *ZapFileOutputPlugin) Write(ctx context.Context, entry *LogEntry) error 
 	default:
 		z.logger.Info(entry.Message, fields...)
 	}
-	
+
 	return nil
 }
 
 // convertToZapFields converts LogEntry fields to zap fields for file output
 func (z *ZapFileOutputPlugin) convertToZapFields(entry *LogEntry) []zap.Field {
 	fields := make([]zap.Field, 0)
-	
+
 	// Add origin
 	if entry.Origin != "" {
 		fields = append(fields, zap.String("origin", entry.Origin))
 	}
-	
+
 	// Add custom fields
 	for k, v := range entry.Fields {
 		fields = append(fields, zap.Any(k, v))
 	}
-	
+
 	// Add error if present
 	if entry.Error != nil {
 		fields = append(fields, zap.Error(entry.Error))
 	}
-	
+
 	// Add caller if present
 	if entry.Caller != "" {
 		fields = append(fields, zap.String("caller", entry.Caller))
 	}
-	
+
 	// Add stack trace if present
 	if entry.StackTrace != "" {
 		fields = append(fields, zap.String("stack_trace", entry.StackTrace))
 	}
-	
+
 	// Add legacy fields for backward compatibility
 	if entry.Action != "" {
 		fields = append(fields, zap.String("action", entry.Action))
@@ -265,10 +275,10 @@ func (z *ZapFileOutputPlugin) convertToZapFields(entry *LogEntry) []zap.Field {
 	if entry.Flag != "" {
 		fields = append(fields, zap.String("flag", entry.Flag))
 	}
-	
+
 	// Add timestamp
 	fields = append(fields, zap.Time("timestamp", entry.Timestamp))
-	
+
 	return fields
 }
 
@@ -281,12 +291,12 @@ func (z *ZapFileOutputPlugin) Close() error {
 			// (sync errors on regular files are often not critical)
 		}
 	}
-	
+
 	if z.lumberjack != nil {
 		// Close the lumberjack logger to finalize current log file
 		return z.lumberjack.Close()
 	}
-	
+
 	return nil
 }
 
@@ -309,4 +319,23 @@ func (z *ZapFileOutputPlugin) GetCurrentLogFile() string {
 		return ""
 	}
 	return z.lumberjack.Filename
+}
+
+// GetStats returns statistics about the file output plugin
+func (z *ZapFileOutputPlugin) GetStats() map[string]interface{} {
+	stats := map[string]interface{}{
+		"type":   "file",
+		"format": z.config.Format,
+	}
+
+	if z.lumberjack != nil {
+		stats["filename"] = z.lumberjack.Filename
+		stats["max_size_mb"] = z.lumberjack.MaxSize
+		stats["max_age_days"] = z.lumberjack.MaxAge
+		stats["max_backups"] = z.lumberjack.MaxBackups
+		stats["compress"] = z.lumberjack.Compress
+		stats["local_time"] = z.lumberjack.LocalTime
+	}
+
+	return stats
 }

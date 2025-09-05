@@ -25,7 +25,7 @@ func NewChainLogger(config *Config) (ChainLogger, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
-	
+
 	logger := &ChainLoggerImpl{
 		config:        config,
 		outputs:       make(map[OutputType]OutputPlugin),
@@ -33,12 +33,12 @@ func NewChainLogger(config *Config) (ChainLogger, error) {
 		level:         config.Level,
 		contextFields: make(map[string]interface{}),
 	}
-	
+
 	// Initialize enabled output plugins
 	if err := logger.initializeOutputs(); err != nil {
 		return nil, fmt.Errorf("failed to initialize outputs: %w", err)
 	}
-	
+
 	return logger, nil
 }
 
@@ -49,20 +49,28 @@ func (c *ChainLoggerImpl) initializeOutputs() error {
 		consoleOutput := NewConsoleOutputPlugin(c.config.Console)
 		c.outputs[ConsoleOutput] = consoleOutput
 	}
-	
+
 	if c.config.File.Enabled {
 		fileOutput := NewFileOutputPlugin(c.config.File)
 		c.outputs[FileOutput] = fileOutput
 	}
-	
+
 	if c.config.Database.Enabled {
-		// Database output will be implemented in Phase 5
+		dbOutput, err := NewDatabaseOutputPlugin(c.config.Database)
+		if err != nil {
+			return fmt.Errorf("failed to create database output: %w", err)
+		}
+		c.outputs[DatabaseOutput] = dbOutput
 	}
-	
+
 	if c.config.MessageQueue.Enabled {
-		// MQ output will be implemented in Phase 6
+		mqOutput, err := NewMessageQueueOutputPlugin(c.config.MessageQueue)
+		if err != nil {
+			return fmt.Errorf("failed to create message queue output: %w", err)
+		}
+		c.outputs[MessageQueueOutput] = mqOutput
 	}
-	
+
 	return nil
 }
 
@@ -106,7 +114,7 @@ func (c *ChainLoggerImpl) Fatal() LogChain {
 	return c.newLogChain(FatalLevel)
 }
 
-// With creates a new log chain with context  
+// With creates a new log chain with context
 func (c *ChainLoggerImpl) With() LogChain {
 	chain := c.newLogChain(InfoLevel)
 	// Reset level to allow setting it later
@@ -123,12 +131,12 @@ func (c *ChainLoggerImpl) WithFields(fields map[string]interface{}) ChainLogger 
 		contextFields[k] = v
 	}
 	c.mu.RUnlock()
-	
+
 	// Add new fields
 	for k, v := range fields {
 		contextFields[k] = v
 	}
-	
+
 	// Create new context logger
 	contextLogger := &ChainLoggerImpl{
 		config:        c.config,
@@ -137,7 +145,7 @@ func (c *ChainLoggerImpl) WithFields(fields map[string]interface{}) ChainLogger 
 		level:         c.level,
 		contextFields: contextFields,
 	}
-	
+
 	return contextLogger
 }
 
@@ -157,24 +165,24 @@ func (c *ChainLoggerImpl) SetLevel(level LogLevel) {
 func (c *ChainLoggerImpl) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	if c.closed {
 		return nil
 	}
-	
+
 	var errs []error
 	for _, output := range c.outputs {
 		if err := output.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	
+
 	c.closed = true
-	
+
 	if len(errs) > 0 {
 		return fmt.Errorf("errors closing outputs: %v", errs)
 	}
-	
+
 	return nil
 }
 
@@ -183,7 +191,7 @@ func (c *ChainLoggerImpl) newLogChain(level LogLevel) LogChain {
 	entry := c.pool.GetLogEntry()
 	entry.Level = level
 	entry.Origin = c.config.Origin
-	
+
 	// Add context fields if any
 	c.mu.RLock()
 	if c.contextFields != nil {
@@ -192,12 +200,12 @@ func (c *ChainLoggerImpl) newLogChain(level LogLevel) LogChain {
 		}
 	}
 	c.mu.RUnlock()
-	
+
 	// Add stack trace for non-info levels if enabled
 	if c.config.EnableStack && level != InfoLevel {
 		entry.StackTrace = c.getStackTrace()
 	}
-	
+
 	return &LogChainImpl{
 		logger: c,
 		entry:  entry,
@@ -209,7 +217,7 @@ func (c *ChainLoggerImpl) getStackTrace() string {
 	buf := make([]byte, 1024*4)
 	n := runtime.Stack(buf, false)
 	stack := string(buf[:n])
-	
+
 	// Filter out the current function and log function calls
 	lines := strings.Split(stack, "\n")
 	var filteredLines []string
@@ -223,7 +231,7 @@ func (c *ChainLoggerImpl) getStackTrace() string {
 			filteredLines = append(filteredLines, line)
 		}
 	}
-	
+
 	return strings.Join(filteredLines, "\n")
 }
 
@@ -417,12 +425,12 @@ func (lc *LogChainImpl) Log() {
 		lc.logger.pool.PutLogEntry(lc.entry)
 		lc.logger.pool.PutLogChain(lc)
 	}()
-	
+
 	// If no specific targets are set, use default outputs
 	if len(lc.entry.Targets) == 0 {
 		lc.setDefaultTargets()
 	}
-	
+
 	// Write to all targeted outputs
 	ctx := context.Background()
 	for _, target := range lc.entry.Targets {
@@ -434,7 +442,7 @@ func (lc *LogChainImpl) Log() {
 			}
 		}
 	}
-	
+
 	// Handle fatal level
 	if lc.entry.Level == FatalLevel {
 		panic(fmt.Sprintf("Fatal log: %s", lc.entry.Message))
@@ -471,30 +479,30 @@ func (lc *LogChainImpl) reset() {
 // NoOpLogChain is a no-operation log chain for disabled log levels
 type NoOpLogChain struct{}
 
-func (n *NoOpLogChain) Debug() LogChain                                     { return n }
-func (n *NoOpLogChain) Info() LogChain                                      { return n }
-func (n *NoOpLogChain) Warn() LogChain                                      { return n }
-func (n *NoOpLogChain) Error() LogChain                                     { return n }
-func (n *NoOpLogChain) Fatal() LogChain                                     { return n }
-func (n *NoOpLogChain) Msg(msg string) LogChain                              { return n }
-func (n *NoOpLogChain) Msgf(format string, args ...interface{}) LogChain    { return n }
-func (n *NoOpLogChain) Str(key, val string) LogChain                        { return n }
-func (n *NoOpLogChain) Int(key string, val int) LogChain                     { return n }
-func (n *NoOpLogChain) Int64(key string, val int64) LogChain                 { return n }
-func (n *NoOpLogChain) Float64(key string, val float64) LogChain             { return n }
-func (n *NoOpLogChain) Bool(key string, val bool) LogChain                   { return n }
-func (n *NoOpLogChain) Time(key string, val time.Time) LogChain              { return n }
-func (n *NoOpLogChain) Dur(key string, val time.Duration) LogChain           { return n }
-func (n *NoOpLogChain) Any(key string, val interface{}) LogChain             { return n }
-func (n *NoOpLogChain) Err(err error) LogChain                               { return n }
-func (n *NoOpLogChain) Stack() LogChain                                      { return n }
-func (n *NoOpLogChain) Caller() LogChain                                     { return n }
-func (n *NoOpLogChain) With(key string, val interface{}) LogChain            { return n }
-func (n *NoOpLogChain) WithFields(fields map[string]interface{}) LogChain    { return n }
-func (n *NoOpLogChain) ToConsole() LogChain                                  { return n }
-func (n *NoOpLogChain) ToFile(filename string) LogChain                      { return n }
-func (n *NoOpLogChain) ToDB() LogChain                                       { return n }
-func (n *NoOpLogChain) ToMQ(topic string) LogChain                           { return n }
-func (n *NoOpLogChain) WithDatabase(driver DatabaseDriver) LogChain          { return n }
-func (n *NoOpLogChain) Log()                                                 {}
-func (n *NoOpLogChain) Logf(format string, args ...interface{})             {}
+func (n *NoOpLogChain) Debug() LogChain                                   { return n }
+func (n *NoOpLogChain) Info() LogChain                                    { return n }
+func (n *NoOpLogChain) Warn() LogChain                                    { return n }
+func (n *NoOpLogChain) Error() LogChain                                   { return n }
+func (n *NoOpLogChain) Fatal() LogChain                                   { return n }
+func (n *NoOpLogChain) Msg(msg string) LogChain                           { return n }
+func (n *NoOpLogChain) Msgf(format string, args ...interface{}) LogChain  { return n }
+func (n *NoOpLogChain) Str(key, val string) LogChain                      { return n }
+func (n *NoOpLogChain) Int(key string, val int) LogChain                  { return n }
+func (n *NoOpLogChain) Int64(key string, val int64) LogChain              { return n }
+func (n *NoOpLogChain) Float64(key string, val float64) LogChain          { return n }
+func (n *NoOpLogChain) Bool(key string, val bool) LogChain                { return n }
+func (n *NoOpLogChain) Time(key string, val time.Time) LogChain           { return n }
+func (n *NoOpLogChain) Dur(key string, val time.Duration) LogChain        { return n }
+func (n *NoOpLogChain) Any(key string, val interface{}) LogChain          { return n }
+func (n *NoOpLogChain) Err(err error) LogChain                            { return n }
+func (n *NoOpLogChain) Stack() LogChain                                   { return n }
+func (n *NoOpLogChain) Caller() LogChain                                  { return n }
+func (n *NoOpLogChain) With(key string, val interface{}) LogChain         { return n }
+func (n *NoOpLogChain) WithFields(fields map[string]interface{}) LogChain { return n }
+func (n *NoOpLogChain) ToConsole() LogChain                               { return n }
+func (n *NoOpLogChain) ToFile(filename string) LogChain                   { return n }
+func (n *NoOpLogChain) ToDB() LogChain                                    { return n }
+func (n *NoOpLogChain) ToMQ(topic string) LogChain                        { return n }
+func (n *NoOpLogChain) WithDatabase(driver DatabaseDriver) LogChain       { return n }
+func (n *NoOpLogChain) Log()                                              {}
+func (n *NoOpLogChain) Logf(format string, args ...interface{})           {}

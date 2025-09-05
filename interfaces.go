@@ -20,7 +20,7 @@ type ChainLogger interface {
 
 	// Legacy compatibility
 	Legacy() LegacyLogger
-	
+
 	// Configuration and control
 	SetLevel(level LogLevel)
 	Close() error
@@ -73,6 +73,7 @@ type OutputPlugin interface {
 	Write(ctx context.Context, entry *LogEntry) error
 	Close() error
 	Name() string
+	GetStats() map[string]interface{}
 }
 
 // Formatter defines the interface for log formatting

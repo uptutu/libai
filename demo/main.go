@@ -10,14 +10,14 @@ func main() {
 
 	// 演示 zap 集成
 	libai.DemoZapIntegration()
-	
+
 	// 演示文件输出增强功能
 	fmt.Println()
 	libai.DemoFileOutputEnhancements()
-	
+
 	// 简单的对比演示
 	fmt.Println("\n=== 新老 API 对比 ===")
-	
+
 	// 创建链式日志器
 	config := libai.DefaultConfig()
 	config.Origin = "demo-comparison"
@@ -25,16 +25,16 @@ func main() {
 	config.Console.Enabled = true
 	config.Console.Format = "text"
 	config.Console.Colorized = true
-	
+
 	chainLogger, _ := libai.NewChainLogger(config)
-	
+
 	fmt.Println("\n旧版 API 风格:")
 	legacyLogger := chainLogger.Legacy()
 	legacyLogger.Info("user_action", "login", map[string]interface{}{
 		"user_id": 123,
-		"method": "password",
+		"method":  "password",
 	})
-	
+
 	fmt.Println("\n新版链式 API 风格:")
 	chainLogger.Info().
 		Msg("用户操作").
@@ -42,8 +42,8 @@ func main() {
 		Int("user_id", 123).
 		Str("method", "password").
 		Log()
-	
+
 	chainLogger.Close()
-	
+
 	fmt.Println("\n=== 演示完成 ===")
 }

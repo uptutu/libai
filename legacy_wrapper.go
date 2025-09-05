@@ -15,10 +15,10 @@ func (l *LegacyWrapper) Debug(action string, flag string, content any) {
 	if l.chainLogger.level > DebugLevel {
 		return
 	}
-	
+
 	// Convert content to JSON string for backward compatibility
 	contentStr := l.convertContent(content)
-	
+
 	l.chainLogger.Debug().
 		Str("action", action).
 		Str("flag", flag).
@@ -32,10 +32,10 @@ func (l *LegacyWrapper) Info(action string, flag string, content any) {
 	if l.chainLogger.level > InfoLevel {
 		return
 	}
-	
+
 	// Convert content to JSON string for backward compatibility
 	contentStr := l.convertContent(content)
-	
+
 	l.chainLogger.Info().
 		Str("action", action).
 		Str("flag", flag).
@@ -49,10 +49,10 @@ func (l *LegacyWrapper) Warn(action string, flag string, content any) {
 	if l.chainLogger.level > WarnLevel {
 		return
 	}
-	
+
 	// Convert content to JSON string for backward compatibility
 	contentStr := l.convertContent(content)
-	
+
 	l.chainLogger.Warn().
 		Str("action", action).
 		Str("flag", flag).
@@ -66,10 +66,10 @@ func (l *LegacyWrapper) Error(action string, flag string, content any) {
 	if l.chainLogger.level > ErrorLevel {
 		return
 	}
-	
+
 	// Convert content to JSON string for backward compatibility
 	contentStr := l.convertContent(content)
-	
+
 	l.chainLogger.Error().
 		Str("action", action).
 		Str("flag", flag).
@@ -82,7 +82,7 @@ func (l *LegacyWrapper) Error(action string, flag string, content any) {
 func (l *LegacyWrapper) Fatal(action string, flag string, content any) {
 	// Convert content to JSON string for backward compatibility
 	contentStr := l.convertContent(content)
-	
+
 	l.chainLogger.Fatal().
 		Str("action", action).
 		Str("flag", flag).
@@ -112,18 +112,18 @@ func (l *LegacyWrapper) convertContent(content any) string {
 	if content == nil {
 		return ""
 	}
-	
+
 	// Handle string content directly
 	if str, ok := content.(string); ok {
 		return str
 	}
-	
+
 	// Convert to JSON for complex types
 	data, err := json.Marshal(content)
 	if err != nil {
 		return fmt.Sprintf("failed to marshal content: %v", err)
 	}
-	
+
 	return string(data)
 }
 
@@ -143,14 +143,14 @@ func (z *LoggerZapWrapper) Warn(action string, flag string, content any) {
 		z.logger.Warn(action, flag, content)
 		return
 	}
-	
+
 	// Handle new chain logger case
 	if z.chainLogger != nil && z.chainLogger.level > WarnLevel {
 		return
 	}
-	
+
 	contentStr := z.convertContent(content)
-	
+
 	z.chainLogger.Warn().
 		Str("action", action).
 		Str("flag", flag).
@@ -169,14 +169,14 @@ func (z *LoggerZapWrapper) Debug(action string, flag string, content any) {
 		z.logger.Debug(action, flag, content)
 		return
 	}
-	
+
 	// Handle new chain logger case
 	if z.chainLogger != nil && z.chainLogger.level > DebugLevel {
 		return
 	}
-	
+
 	contentStr := z.convertContent(content)
-	
+
 	z.chainLogger.Debug().
 		Str("action", action).
 		Str("flag", flag).
@@ -192,14 +192,14 @@ func (z *LoggerZapWrapper) Error(action string, flag string, content any) {
 		z.logger.Error(action, flag, content)
 		return
 	}
-	
+
 	// Handle new chain logger case
 	if z.chainLogger != nil && z.chainLogger.level > ErrorLevel {
 		return
 	}
-	
+
 	contentStr := z.convertContent(content)
-	
+
 	z.chainLogger.Error().
 		Str("action", action).
 		Str("flag", flag).
@@ -215,14 +215,14 @@ func (z *LoggerZapWrapper) Info(action string, flag string, content any) {
 		z.logger.Info(action, flag, content)
 		return
 	}
-	
+
 	// Handle new chain logger case
 	if z.chainLogger != nil && z.chainLogger.level > InfoLevel {
 		return
 	}
-	
+
 	contentStr := z.convertContent(content)
-	
+
 	z.chainLogger.Info().
 		Str("action", action).
 		Str("flag", flag).
@@ -236,18 +236,18 @@ func (z *LoggerZapWrapper) convertContent(content any) string {
 	if content == nil {
 		return ""
 	}
-	
+
 	// Handle string content directly
 	if str, ok := content.(string); ok {
 		return str
 	}
-	
+
 	// Convert to JSON for complex types
 	data, err := json.Marshal(content)
 	if err != nil {
 		return fmt.Sprintf("failed to marshal content: %v", err)
 	}
-	
+
 	return string(data)
 }
 
@@ -259,55 +259,55 @@ type ZapCompatibilityWrapper struct {
 // Info provides basic zap.Info compatibility
 func (z *ZapCompatibilityWrapper) Info(msg string, fields ...interface{}) {
 	chain := z.chainLogger.Info().Msg(msg)
-	
+
 	// Handle pairs of key-value fields
 	for i := 0; i+1 < len(fields); i += 2 {
 		if key, ok := fields[i].(string); ok {
 			chain = chain.Any(key, fields[i+1])
 		}
 	}
-	
+
 	chain.Log()
 }
 
 // Warn provides basic zap.Warn compatibility
 func (z *ZapCompatibilityWrapper) Warn(msg string, fields ...interface{}) {
 	chain := z.chainLogger.Warn().Msg(msg)
-	
+
 	// Handle pairs of key-value fields
 	for i := 0; i+1 < len(fields); i += 2 {
 		if key, ok := fields[i].(string); ok {
 			chain = chain.Any(key, fields[i+1])
 		}
 	}
-	
+
 	chain.Log()
 }
 
 // Error provides basic zap.Error compatibility
 func (z *ZapCompatibilityWrapper) Error(msg string, fields ...interface{}) {
 	chain := z.chainLogger.Error().Msg(msg)
-	
+
 	// Handle pairs of key-value fields
 	for i := 0; i+1 < len(fields); i += 2 {
 		if key, ok := fields[i].(string); ok {
 			chain = chain.Any(key, fields[i+1])
 		}
 	}
-	
+
 	chain.Log()
 }
 
 // Debug provides basic zap.Debug compatibility
 func (z *ZapCompatibilityWrapper) Debug(msg string, fields ...interface{}) {
 	chain := z.chainLogger.Debug().Msg(msg)
-	
+
 	// Handle pairs of key-value fields
 	for i := 0; i+1 < len(fields); i += 2 {
 		if key, ok := fields[i].(string); ok {
 			chain = chain.Any(key, fields[i+1])
 		}
 	}
-	
+
 	chain.Log()
 }

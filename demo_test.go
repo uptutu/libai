@@ -8,7 +8,7 @@ import (
 func TestCompleteDemo(t *testing.T) {
 	fmt.Println("=== Libai Chain-Style Logging Library Demo ===")
 	fmt.Println()
-	
+
 	// Test the new chain API
 	chainLogger, err := NewLoggerBuilder().
 		SetOrigin("demo-app").
@@ -41,7 +41,7 @@ func TestCompleteDemo(t *testing.T) {
 		"user": "jane_doe",
 		"ip":   "192.168.1.1",
 	})
-	
+
 	// Test With() method
 	fmt.Println("\n=== Context Demo ===")
 	chainLogger.With().
